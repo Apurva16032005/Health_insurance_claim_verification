@@ -3,317 +3,595 @@ import requests
 import time
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 
-# --- CONFIGURATION ---
+# --- SYSTEM CONFIGURATION ---
 API_URL = "http://localhost:8000"
+
 st.set_page_config(
-    page_title="FraudShield AI",
-    page_icon="🛡️",
+    page_title="InsurVerify | Enterprise Claims Auditing",
+    page_icon="⚖️",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
 
-# --- STYLING & HEADER ---
-def render_header(show_logout=False):
-    st.markdown("""
-    <style>
-        .stButton>button {
-            width: 100%;
-            border-radius: 5px;
-            height: 3em;
-        }
-        .main-header {
-            background: linear-gradient(to right, #1e3c72, #2a5298);
-            padding: 20px;
-            border-radius: 10px;
-            color: white;
-            text-align: center;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-        /* Status Badges */
-        .badge-high { background-color: #ffebee; color: #c62828; padding: 4px 12px; border-radius: 20px; font-weight: bold; border: 1px solid #ef9a9a; }
-        .badge-med { background-color: #fff3e0; color: #ef6c00; padding: 4px 12px; border-radius: 20px; font-weight: bold; border: 1px solid #ffcc80; }
-        .badge-low { background-color: #e8f5e9; color: #2e7d32; padding: 4px 12px; border-radius: 20px; font-weight: bold; border: 1px solid #a5d6a7; }
-    </style>
-    """, unsafe_allow_html=True)
+# --- MODERN ENTERPRISE DESIGN SYSTEM ---
+st.markdown("""
+<style>
+    /* Global Typography & Font Smoothing */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    
+    html, body, [class*="css"] {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        color: #0f172a;
+    }
+    
+    /* Main Background */
+    .stApp {
+        background-color: #f8fafc;
+    }
+    
+    /* Navbar Styling */
+    .navbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 28px;
+        background: #ffffff;
+        border-bottom: 1px solid #e2e8f0;
+        margin: -4rem -4rem 1.5rem -4rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+    }
+    .brand-container {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    .brand-logo {
+        width: 32px;
+        height: 32px;
+        background: #1e293b;
+        color: #ffffff;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 15px;
+        letter-spacing: -0.5px;
+    }
+    .brand-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: #0f172a;
+        margin: 0;
+        letter-spacing: -0.3px;
+    }
+    .brand-subtitle {
+        font-size: 12px;
+        color: #64748b;
+        margin: 0;
+        font-weight: 400;
+    }
+    .badge-env {
+        background: #f1f5f9;
+        color: #475569;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 3px 8px;
+        border-radius: 4px;
+        border: 1px solid #cbd5e1;
+        letter-spacing: 0.3px;
+        text-transform: uppercase;
+    }
+    
+    /* Card Component */
+    .saas-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 24px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.03), 0 2px 6px rgba(0,0,0,0.01);
+        margin-bottom: 20px;
+    }
+    .card-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: #0f172a;
+        margin-bottom: 4px;
+    }
+    .card-description {
+        font-size: 13px;
+        color: #64748b;
+        margin-bottom: 18px;
+    }
+    
+    /* Metric Card Component */
+    .metric-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 16px 20px;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+    }
+    .metric-label {
+        font-size: 12px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #64748b;
+        margin-bottom: 6px;
+    }
+    .metric-value {
+        font-size: 24px;
+        font-weight: 700;
+        color: #0f172a;
+        line-height: 1.2;
+    }
+    .metric-sub {
+        font-size: 12px;
+        color: #94a3b8;
+        margin-top: 4px;
+    }
+    
+    /* Status Badges */
+    .risk-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.2px;
+    }
+    .risk-low {
+        background: #f0fdf4;
+        color: #15803d;
+        border: 1px solid #bbf7d0;
+    }
+    .risk-med {
+        background: #fffbeb;
+        color: #b45309;
+        border: 1px solid #fde68a;
+    }
+    .risk-high {
+        background: #fef2f2;
+        color: #b91c1c;
+        border: 1px solid #fecaca;
+    }
+    
+    /* Audit Detail Item */
+    .audit-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        margin-top: 14px;
+    }
+    .audit-item {
+        background: #f8fafc;
+        border: 1px solid #f1f5f9;
+        border-radius: 6px;
+        padding: 10px 14px;
+    }
+    .audit-item-label {
+        font-size: 11px;
+        color: #64748b;
+        text-transform: uppercase;
+        font-weight: 500;
+        margin-bottom: 2px;
+    }
+    .audit-item-val {
+        font-size: 14px;
+        font-weight: 600;
+        color: #1e293b;
+    }
+    
+    /* Streamlit Button Overrides */
+    .stButton>button {
+        border-radius: 6px;
+        font-weight: 500;
+        font-size: 14px;
+        padding: 0.5rem 1rem;
+        transition: all 0.15s ease-in-out;
+    }
+    .stButton>button[kind="primary"] {
+        background-color: #2563eb;
+        border-color: #2563eb;
+        color: #ffffff;
+    }
+    .stButton>button[kind="primary"]:hover {
+        background-color: #1d4ed8;
+        border-color: #1d4ed8;
+    }
+    
+    /* Expanders */
+    .streamlit-expanderHeader {
+        background-color: #ffffff !important;
+        border-radius: 8px !important;
+        font-weight: 600 !important;
+        font-size: 14px !important;
+        color: #1e293b !important;
+        border: 1px solid #e2e8f0 !important;
+    }
+    
+    /* Form inputs */
+    .stTextInput>div>div>input, .stNumberInput>div>div>input {
+        border-radius: 6px;
+        border: 1px solid #cbd5e1;
+        font-size: 14px;
+    }
+    .stTextInput>div>div>input:focus, .stNumberInput>div>div>input:focus {
+        border-color: #2563eb;
+        box-shadow: 0 0 0 1px #2563eb;
+    }
+</style>
+""", unsafe_allow_html=True)
 
-    c1, c2 = st.columns([6, 1])
-    with c1:
+# --- NAVBAR HEADER ---
+def render_navbar(user_role=None):
+    col1, col2 = st.columns([5, 1.2])
+    with col1:
         st.markdown("""
-        <div class="main-header">
-            <h1 style="margin:0; font-family: 'Segoe UI', sans-serif;">🛡️ FraudShield AI</h1>
-            <p style="margin:0; opacity: 0.8; font-weight: 300;">Enterprise-Grade Insurance Verification System</p>
+        <div class="navbar">
+            <div class="brand-container">
+                <div class="brand-logo">IV</div>
+                <div>
+                    <p class="brand-title">InsurVerify Enterprise</p>
+                    <p class="brand-subtitle">Automated Claims Fraud & Discrepancy Auditing</p>
+                </div>
+            </div>
+            <span class="badge-env">Production v2.4</span>
         </div>
         """, unsafe_allow_html=True)
-    with c2:
-        if show_logout:
+    with col2:
+        if user_role:
             st.write("")
-            st.write("")
-            if st.button("🚪 Logout"):
+            if st.button("Sign Out", key="nav_logout", use_container_width=True):
                 st.session_state['role'] = None
                 st.rerun()
 
-# --- PAGE: LOGIN ---
-def login_page():
-    render_header(show_logout=False)
+# --- LOGIN VIEW ---
+def render_login():
+    render_navbar()
     
-    c1, c2, c3 = st.columns([1, 1.5, 1])
+    c1, c2, c3 = st.columns([1, 1.3, 1])
     with c2:
-        with st.container(border=True):
-            st.subheader("🔐 Secure Access Portal")
-            
-            role = st.radio("Select User Role:", ["Policyholder", "Claims Officer"], horizontal=True)
-            st.markdown("---")
-            
-            if role == "Policyholder":
-                st.markdown("#### 👤 Policyholder Login")
-                email = st.text_input("Email Address", placeholder="user@example.com")
-                password = st.text_input("Password", type="password")
-                
-                if st.button("Login", type="primary"):
-                    if email and password:
-                        with st.spinner("Authenticating..."):
-                            time.sleep(1)
-                            st.session_state['role'] = "User"
-                            st.session_state['user_email'] = email
-                            st.success("Login Successful!")
-                            st.rerun()
-                    else:
-                        st.error("Please enter both Email and Password.")
+        st.markdown('<div class="saas-card">', unsafe_allow_html=True)
+        st.markdown('<div class="card-title">Authentication Portal</div>', unsafe_allow_html=True)
+        st.markdown('<div class="card-description">Select your access domain to access the verification workspace.</div>', unsafe_allow_html=True)
+        
+        tab_user, tab_officer = st.tabs(["Policyholder Portal", "Claims Auditor Portal"])
+        
+        with tab_user:
+            st.write("")
+            email = st.text_input("Account Email", placeholder="policyholder@domain.com", key="login_user_email")
+            pwd = st.text_input("Security PIN / Password", type="password", key="login_user_pwd")
+            st.write("")
+            if st.button("Sign In as Policyholder", type="primary", use_container_width=True, key="btn_login_user"):
+                if email and pwd:
+                    st.session_state['role'] = 'User'
+                    st.session_state['user_email'] = email
+                    st.rerun()
+                else:
+                    st.error("Please provide both email and password credentials.")
+                    
+        with tab_officer:
+            st.write("")
+            officer_id = st.text_input("Auditor Badge / ID", placeholder="EMP-8821", key="login_off_id")
+            off_email = st.text_input("Corporate Email", placeholder="auditor@insurance.com", key="login_off_email")
+            off_pwd = st.text_input("Master Password", type="password", key="login_off_pwd", help="Default auditor access: admin123")
+            st.write("")
+            if st.button("Sign In as Auditor", type="primary", use_container_width=True, key="btn_login_off"):
+                if officer_id and off_email and off_pwd == "admin123":
+                    st.session_state['role'] = 'Officer'
+                    st.session_state['officer_id'] = officer_id
+                    st.rerun()
+                elif not (officer_id and off_email and off_pwd):
+                    st.warning("All auditor credential fields are mandatory.")
+                else:
+                    st.error("Invalid auditor credentials. (Authorized default: 'admin123')")
+                    
+        st.markdown('</div>', unsafe_allow_html=True)
 
-            elif role == "Claims Officer":
-                st.markdown("#### 👮‍♂️ Officer Login")
-                officer_id = st.text_input("Officer ID", placeholder="EMP-8821")
-                email = st.text_input("Official Email", placeholder="officer@insurance.com")
-                password = st.text_input("Password", type="password")
-                
-                if st.button("Access Dashboard", type="primary"):
-                    if officer_id and email and password == "admin123":
-                        with st.spinner("Verifying Credentials..."):
-                            time.sleep(1)
-                            st.session_state['role'] = "Officer"
-                            st.success("Access Granted")
-                            st.rerun()
-                    elif not (officer_id and email and password):
-                        st.warning("All fields are required.")
-                    else:
-                        st.error("Invalid Credentials. (Hint: Pass is 'admin123')")
-
-# --- PAGE: USER DASHBOARD ---
-def user_dashboard():
-    render_header(show_logout=True)
+# --- POLICYHOLDER VIEW ---
+def render_policyholder():
+    render_navbar(user_role="User")
     
-    st.info(f"👤 Logged in as: {st.session_state.get('user_email', 'User')}")
-
-    st.subheader("📄 Submit New Claims")
-    with st.container(border=True):
-        col1, col2 = st.columns(2)
-        with col1:
-            name = st.text_input("Patient Name")
-            hospital = st.text_input("Hospital Name")
-        with col2:
-            amount = st.number_input("Total Claim Amount (₹)", min_value=0)
-            desc = st.text_area("Treatment Description", height=100)
+    col_crumb, col_act = st.columns([4, 1])
+    with col_crumb:
+        st.markdown(f"**Workspace:** Claims Submissions &nbsp;|&nbsp; Logged in as: `{st.session_state.get('user_email', 'user')}`")
+    
+    st.write("")
+    
+    col_left, col_right = st.columns([1.6, 1])
+    
+    with col_left:
+        st.markdown('<div class="saas-card">', unsafe_allow_html=True)
+        st.markdown('<div class="card-title">New Reimbursement Claim Submission</div>', unsafe_allow_html=True)
+        st.markdown('<div class="card-description">Upload your itemized medical bill, receipt, or discharge summary for automated verification.</div>', unsafe_allow_html=True)
+        
+        c1, c2 = st.columns(2)
+        with c1:
+            p_name = st.text_input("Patient Full Name", placeholder="e.g. John Doe")
+            h_name = st.text_input("Medical Facility / Hospital", placeholder="e.g. City General Hospital")
+        with c2:
+            amt = st.number_input("Total Claimed Amount (INR ₹)", min_value=0.0, step=500.0, format="%.2f")
+            desc = st.text_input("Treatment / Diagnostic Summary", placeholder="e.g. Emergency Appendectomy")
             
-        files = st.file_uploader(
-            "Upload Documents (Bills, Reports, etc.)", 
-            type=["jpg", "png", "jpeg", "pdf"], 
-            accept_multiple_files=True 
+        st.write("")
+        uploaded_files = st.file_uploader(
+            "Document Attachments (Bill Receipts, Invoices, Summaries)", 
+            type=["jpg", "jpeg", "png", "pdf"],
+            accept_multiple_files=True
         )
         
-        if st.button("🚀 Submit All Claims", type="primary"):
-            if files and amount > 0:
-                for file in files:
-                    with st.status(f"Processing {file.name}...", expanded=True) as status:
-                        st.write("📤 Uploading secure data...")
-                        time.sleep(0.5)
-                        st.write("🔍 Running OCR & Text Extraction...")
-                        st.write("🖼️ Performing CNN Forgery Detection...")
-                        st.write("🧠 Analyzing Medical Context...")
-                        
-                        try:
-                            file.seek(0)
-                            files_payload = {"file": (file.name, file.getvalue(), file.type)}
-                            data_payload = {
-                                "amount": amount, 
-                                "user_id": 101, 
-                                "description": desc,
-                                "hospital_name": hospital,
-                                "patient_name": name
-                            }
-                            
-                            res = requests.post(f"{API_URL}/upload-claim", files=files_payload, data=data_payload)
-                            
-                            if res.status_code == 200:
-                                json_res = res.json()
-                                status.update(label=f"✅ {file.name} - Analysis Complete", state="complete", expanded=False)
-                                
-                                risk = json_res['fraud_score']
-                                color = "red" if risk > 0.7 else "orange" if risk > 0.4 else "green"
-                                label = "High Risk" if risk > 0.7 else "Review" if risk > 0.4 else "Low Risk"
-                                
-                                st.markdown(f"""
-                                <div style="border-left: 5px solid {color}; padding: 10px; background: #f0f2f6; border-radius: 5px; margin-bottom: 10px;">
-                                    <strong>File:</strong> {file.name}<br>
-                                    <strong>Claim ID:</strong> {json_res['claim_id']}<br>
-                                    <strong>AI Assessment:</strong> <span style="color:{color}; font-weight:bold;">{label} ({risk*100:.1f}%)</span>
-                                </div>
-                                """, unsafe_allow_html=True)
-                            else:
-                                status.update(label="❌ Error", state="error")
-                                st.error(f"Server Error for {file.name}")
-                        except Exception as e:
-                            st.error(f"Could not connect for {file.name}. Is backend running?")
-                            
-                st.success("Batch processing finished!")
+        st.write("")
+        submit_btn = st.button("Submit Claim for Automated Audit", type="primary", use_container_width=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+        if submit_btn:
+            if not uploaded_files or amt <= 0:
+                st.warning("Please upload at least one receipt document and specify a valid claim amount.")
             else:
-                st.warning("Please upload at least one file and enter a valid amount.")
-
-# --- ANALYTICS COMPONENT (Native Python) ---
-def render_analytics():
-    st.subheader("📊 Executive Risk Overview")
-    st.markdown("Real-time insights from the **FraudShield Data Warehouse**.")
-    
-    try:
-        # 1. Fetch live data from Backend
-        claims = requests.get(f"{API_URL}/get-pending-claims").json()
-        
-        if not claims:
-            st.info("Waiting for data... Submit some claims to see analytics!")
-            return
-
-        # 2. Process Data into a Table (DataFrame)
-        df = pd.DataFrame(claims)
-        
-        # Extract values from the nested JSON structure
-        df['Claim ID'] = df['claim_id']
-        df['Amount'] = df['input_data'].apply(lambda x: x['amount_claimed'])
-        df['Hospital'] = df['input_data'].apply(lambda x: x['hospital_name'])
-        df['Risk Score'] = df['scores'].apply(lambda x: x['final_fraud_score'])
-        df['Risk Level'] = df['details'].apply(lambda x: x.get('risk_label', 'Unknown'))
-        df['Date'] = pd.to_datetime(df['created_at'])
-
-        # 3. TOP METRICS ROW
-        total_val = df['Amount'].sum()
-        avg_risk = df['Risk Score'].mean() * 100
-        critical = df[df['Risk Score'] > 0.7].shape[0]
-        
-        m1, m2, m3, m4 = st.columns(4)
-        m1.metric("Total Claims Processed", len(df))
-        m2.metric("Total Value at Risk", f"₹{total_val:,.0f}")
-        m3.metric("Average Fraud Risk", f"{avg_risk:.1f}%")
-        m4.metric("Critical Flags", critical, delta_color="inverse")
-        
-        st.divider()
-
-        # 4. CHARTS ROW
-        c1, c2 = st.columns(2)
-        
-        with c1:
-            # Pie Chart: Risk Distribution
-            st.markdown("##### ⚠️ Risk Classification")
-            fig_pie = px.pie(df, names='Risk Level', values='Amount', hole=0.4,
-                             color='Risk Level',
-                             color_discrete_map={'High':'#ef5350', 'Medium':'#ffa726', 'Low':'#66bb6a'})
-            st.plotly_chart(fig_pie, use_container_width=True)
-            
-        with c2:
-            # Bar Chart: Fraud by Hospital
-            st.markdown("##### 🏥 Hospital Watchlist")
-            # Calculate average risk per hospital
-            hosp_risk = df.groupby('Hospital')['Risk Score'].mean().reset_index()
-            fig_bar = px.bar(hosp_risk, x='Risk Score', y='Hospital', orientation='h',
-                             color='Risk Score', range_x=[0,1],
-                             color_continuous_scale=['green', 'yellow', 'red'])
-            st.plotly_chart(fig_bar, use_container_width=True)
-
-    except Exception as e:
-        st.error(f"Analytics Error: {e}")
-
-# --- PAGE: OFFICER DASHBOARD ---
-def officer_dashboard():
-    render_header(show_logout=True)
-    st.success("👮‍♂️ Officer Dashboard: Active")
-    
-    tab1, tab2 = st.tabs(["📥 Pending Claims", "📊 Executive Analytics"])
-    
-    with tab1:
-        st.subheader("📥 Pending Claims Queue")
-        try:
-            claims = requests.get(f"{API_URL}/get-pending-claims").json()
-            if not claims:
-                st.info("No pending claims found. System clear.")
-            else:
-                for c in claims:
-                    risk_score = c['scores']['final_fraud_score']
-                    if risk_score > 0.75:
-                        emoji = "🔴"
-                        risk_text = "CRITICAL RISK"
-                    elif risk_score > 0.4:
-                        emoji = "🟠"
-                        risk_text = "MODERATE RISK"
-                    else:
-                        emoji = "🟢"
-                        risk_text = "SAFE"
-
-                    with st.expander(f"{emoji} Claim #{c['claim_id']} | {c['input_data']['hospital_name']} | {risk_text} ({risk_score:.2f})"):
-                        
-                        c1, c2 = st.columns([1, 1.5])
-                        with c1:
-                            # Display visual forgery heatmap if available and score is significant, otherwise display original document
-                            heatmap_url = c.get('details', {}).get('cnn_heatmap')
-                            if heatmap_url and "temp_heatmap" not in heatmap_url:
-                                st.image(f"{API_URL}{heatmap_url}", caption="Visual Forgery Heatmap (ELA)", use_container_width=True)
-                            else:
-                                st.image(f"{API_URL}{c['input_data']['file_url']}", caption="Submitted Document", use_container_width=True)
-                        
-                        with c2:
-                            st.markdown("### 📊 AI Analysis Report")
-                            st.write(f"**Claimed Amount:** ₹{c['input_data']['amount_claimed']}")
-                            
-                            if 'details' in c:
-                                ext_amt = c['details'].get('extracted_amount')
-                                if ext_amt and ext_amt != 'None' and float(ext_amt) > 0:
-                                    st.write(f"**Extracted Bill Amount:** ₹{ext_amt}")
-                                b_date = c['details'].get('bill_date')
-                                if b_date and b_date != 'None':
-                                    st.write(f"**Bill Date:** {b_date}")
-                                gst = c['details'].get('gst_number')
-                                if gst and gst != 'None':
-                                    st.write(f"**GST Number:** {gst}")
+                progress_container = st.container()
+                with progress_container:
+                    for f in uploaded_files:
+                        with st.spinner(f"Auditing {f.name} with Multimodal Verification Engine..."):
+                            try:
+                                f.seek(0)
+                                files_payload = {"file": (f.name, f.getvalue(), f.type)}
+                                data_payload = {
+                                    "amount": amt,
+                                    "user_id": 101,
+                                    "description": desc or "Medical Reimbursement",
+                                    "hospital_name": h_name or "General Hospital",
+                                    "patient_name": p_name or "Policyholder"
+                                }
+                                
+                                res = requests.post(f"{API_URL}/upload-claim", files=files_payload, data=data_payload)
+                                if res.status_code == 200:
+                                    res_data = res.json()
+                                    score = res_data.get("fraud_score", 0.0)
+                                    risk_tier = res_data.get("risk_label", "Low")
                                     
-                            st.write(f"**Tamper / Manipulation Score:** {c['scores']['cnn_score']:.2f}")
-                            st.info(f"**🤖 Explainable AI (XAI):** {c['xai_explanation']}")
-                            
-                            report_url = f"{API_URL}/reports/Fraud_Report_{c['claim_id']}.pdf"
-                            st.link_button("📥 Download Full Report (PDF)", report_url)
-                            
-                            st.divider()
-                            col_a, col_b = st.columns(2)
-                            if col_a.button("✅ Approve", key=f"app_{c['claim_id']}", use_container_width=True):
-                                requests.post(f"{API_URL}/update-decision", json={"claim_id": c['claim_id'], "status": "Approved", "remarks": "Officer Verified"})
-                                st.success("Approved!")
-                                time.sleep(1)
-                                st.rerun()
-                            if col_b.button("🚫 Reject", key=f"rej_{c['claim_id']}", use_container_width=True):
-                                requests.post(f"{API_URL}/update-decision", json={"claim_id": c['claim_id'], "status": "Rejected", "remarks": "Officer Rejected"})
-                                st.error("Rejected!")
-                                time.sleep(1)
-                                st.rerun()
-        except Exception as e:
-            st.error(f"Unable to fetch data. Ensure Backend is running. Error: {e}")
+                                    badge_class = "risk-high" if score > 0.7 else "risk-med" if score > 0.3 else "risk-low"
+                                    
+                                    st.markdown(f"""
+                                    <div class="metric-card" style="margin-bottom: 12px; border-left: 4px solid {'#dc2626' if score>0.7 else '#d97706' if score>0.3 else '#16a34a'};">
+                                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                                            <div>
+                                                <strong>File:</strong> {f.name} &nbsp;•&nbsp; <strong>Claim Reference:</strong> #{res_data.get('claim_id')}
+                                                <div style="font-size: 13px; color: #64748b; margin-top: 3px;">
+                                                    Verification completed. Status: {res_data.get('message', 'Processed')}
+                                                </div>
+                                            </div>
+                                            <span class="risk-badge {badge_class}">
+                                                {risk_tier.upper()} RISK ({score*100:.1f}%)
+                                            </span>
+                                        </div>
+                                    </div>
+                                    """, unsafe_allow_html=True)
+                                else:
+                                    st.error(f"Server error ({res.status_code}) processing {f.name}. Please ensure the backend is active.")
+                            except Exception as err:
+                                st.error(f"Connection failure for {f.name}: {err}")
+                                
+    with col_right:
+        st.markdown('<div class="saas-card">', unsafe_allow_html=True)
+        st.markdown('<div class="card-title">Automated Verification Protocol</div>', unsafe_allow_html=True)
+        st.markdown('<div class="card-description">Every submitted bill undergoes automated multi-stage evaluation:</div>', unsafe_allow_html=True)
+        
+        st.markdown("""
+        1. **Forensic Splicing Check (CNN & ELA):**  
+           Scans for copy-move edits, pixel resampling, and image manipulation.
+           
+        2. **Optical Character Recognition (EasyOCR):**  
+           Extracts itemized invoice rows, line-item totals, dates, and facility names.
+           
+        3. **Clinical Context Matching (DistilBERT):**  
+           Verifies medical taxonomy and procedure terminology consistency.
+           
+        4. **Financial Ratio Discrepancy (Benford's Check):**  
+           Compares stated reimbursement total against extracted line items.
+        """)
+        st.markdown('</div>', unsafe_allow_html=True)
 
-    with tab2:
-        render_analytics()
+# --- CLAIMS OFFICER VIEW ---
+def render_officer():
+    render_navbar(user_role="Officer")
+    
+    st.markdown(f"**Workspace:** Auditor Console &nbsp;|&nbsp; Inspector: `{st.session_state.get('officer_id', 'EMP-8821')}`")
+    st.write("")
+    
+    # 1. LIVE DATA FETCH
+    claims_data = []
+    try:
+        resp = requests.get(f"{API_URL}/get-pending-claims", timeout=6)
+        if resp.status_code == 200:
+            claims_data = resp.json()
+    except Exception as e:
+        st.error(f"Cannot reach backend API at {API_URL}. Ensure FastAPI is running.")
+        
+    # 2. EXECUTIVE METRICS
+    total_claims = len(claims_data)
+    total_val = sum(c['input_data']['amount_claimed'] for c in claims_data) if claims_data else 0.0
+    critical_count = sum(1 for c in claims_data if c['scores']['final_fraud_score'] > 0.7) if claims_data else 0
+    avg_score = (sum(c['scores']['final_fraud_score'] for c in claims_data) / total_claims * 100) if total_claims > 0 else 0.0
+    
+    m1, m2, m3, m4 = st.columns(4)
+    with m1:
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-label">Active Claims in Queue</div>
+            <div class="metric-value">{total_claims}</div>
+            <div class="metric-sub">Total verified records</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with m2:
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-label">Total Portfolio Exposure</div>
+            <div class="metric-value">₹{total_val:,.2f}</div>
+            <div class="metric-sub">Cumulative claimed volume</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with m3:
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-label">Mean Fraud Risk Index</div>
+            <div class="metric-value">{avg_score:.1f}%</div>
+            <div class="metric-sub">Multimodal model baseline</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with m4:
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-label">Critical Anomaly Flags</div>
+            <div class="metric-value" style="color: {'#dc2626' if critical_count>0 else '#15803d'};">{critical_count}</div>
+            <div class="metric-sub">Requires manual adjudication</div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+    st.write("")
+    
+    # 3. TABS: QUEUE VS ANALYTICS
+    tab_queue, tab_charts = st.tabs(["Inspection Queue", "Portfolio Risk Analytics"])
+    
+    with tab_queue:
+        if not claims_data:
+            st.info("No claims currently awaiting audit in the queue.")
+        else:
+            for item in claims_data:
+                cid = item['claim_id']
+                score = item['scores']['final_fraud_score']
+                tamper_score = item['scores']['cnn_score']
+                hosp = item['input_data']['hospital_name']
+                amt_claimed = item['input_data']['amount_claimed']
+                created = item['created_at']
+                
+                tier = "High" if score > 0.7 else "Medium" if score > 0.3 else "Low"
+                badge_class = "risk-high" if score > 0.7 else "risk-med" if score > 0.3 else "risk-low"
+                
+                exp_header = f"Claim #{cid} • {hosp} • ₹{amt_claimed:,.2f} • {tier.upper()} RISK ({score*100:.1f}%)"
+                
+                with st.expander(exp_header, expanded=(score > 0.7)):
+                    c_left, c_right = st.columns([1, 1.4])
+                    
+                    with c_left:
+                        st.markdown("**Submitted Document & Forgery Analysis**")
+                        heatmap_url = item.get('details', {}).get('cnn_heatmap')
+                        if heatmap_url and "temp_heatmap" not in heatmap_url:
+                            st.image(f"{API_URL}{heatmap_url}", caption="Visual Anomaly Map (ELA / Resampling)", use_container_width=True)
+                        else:
+                            st.image(f"{API_URL}{item['input_data']['file_url']}", caption="Source Document Scan", use_container_width=True)
+                            
+                    with c_right:
+                        st.markdown(f"""
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px;">
+                            <h4 style="margin:0; font-size: 16px; font-weight:600;">Automated Audit Breakdown</h4>
+                            <span class="risk-badge {badge_class}">{tier.upper()} RISK</span>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
+                        ext_amt = item.get('details', {}).get('extracted_amount')
+                        bill_date = item.get('details', {}).get('bill_date') or "Not Detected"
+                        gst_no = item.get('details', {}).get('gst_number') or "Unspecified"
+                        
+                        st.markdown(f"""
+                        <div class="audit-grid">
+                            <div class="audit-item">
+                                <div class="audit-item-label">Claimed Amount</div>
+                                <div class="audit-item-val">₹{amt_claimed:,.2f}</div>
+                            </div>
+                            <div class="audit-item">
+                                <div class="audit-item-label">OCR Extracted Total</div>
+                                <div class="audit-item-val">₹{float(ext_amt):,.2f}</div>
+                            </div>
+                            <div class="audit-item">
+                                <div class="audit-item-label">Document Date</div>
+                                <div class="audit-item-val">{bill_date}</div>
+                            </div>
+                            <div class="audit-item">
+                                <div class="audit-item-label">Facility GSTIN</div>
+                                <div class="audit-item-val">{gst_no}</div>
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
+                        st.write("")
+                        st.markdown(f"**Visual Splicing Score:** `{tamper_score:.2f}` &nbsp;|&nbsp; **Composite Fraud Score:** `{score:.2f}`")
+                        
+                        explanation = item.get('xai_explanation', 'No detailed anomalies flagged.')
+                        st.markdown(f"""
+                        <div style="background:#f1f5f9; border-radius:6px; padding:10px 14px; font-size:13px; color:#334155; margin-top:8px;">
+                            <strong>AI Audit Finding:</strong> {explanation}
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
+                        st.write("")
+                        pdf_report_url = f"{API_URL}/reports/Fraud_Report_{cid}.pdf"
+                        st.link_button("Download Audit Verification Report (PDF)", pdf_report_url, use_container_width=True)
+                        
+                        st.write("")
+                        btn_c1, btn_c2 = st.columns(2)
+                        with btn_c1:
+                            if st.button("Approve Claim", key=f"app_{cid}", type="primary", use_container_width=True):
+                                requests.post(f"{API_URL}/update-decision", json={"claim_id": cid, "status": "Approved", "remarks": "Approved by Officer"})
+                                st.success("Claim approved and archived.")
+                                time.sleep(0.6)
+                                st.rerun()
+                        with btn_c2:
+                            if st.button("Flag / Reject", key=f"rej_{cid}", use_container_width=True):
+                                requests.post(f"{API_URL}/update-decision", json={"claim_id": cid, "status": "Rejected", "remarks": "Rejected: Discrepancy Found"})
+                                st.error("Claim flagged for rejection.")
+                                time.sleep(0.6)
+                                st.rerun()
 
-# --- ROUTER ---
+    with tab_charts:
+        if not claims_data:
+            st.info("No claims available for aggregate portfolio analytics.")
+        else:
+            df = pd.DataFrame(claims_data)
+            df['Amount'] = df['input_data'].apply(lambda x: x['amount_claimed'])
+            df['Hospital'] = df['input_data'].apply(lambda x: x['hospital_name'])
+            df['Risk Score'] = df['scores'].apply(lambda x: x['final_fraud_score'])
+            df['Risk Level'] = df['details'].apply(lambda x: x.get('risk_label', 'Unknown'))
+            
+            c_p1, c_p2 = st.columns(2)
+            with c_p1:
+                st.markdown('<div class="saas-card">', unsafe_allow_html=True)
+                st.markdown('<div class="card-title">Portfolio Exposure by Risk Tier</div>', unsafe_allow_html=True)
+                fig_pie = px.pie(
+                    df, names='Risk Level', values='Amount', hole=0.5,
+                    color='Risk Level',
+                    color_discrete_map={'High': '#dc2626', 'Medium': '#d97706', 'Low': '#16a34a'}
+                )
+                fig_pie.update_layout(margin=dict(t=10, b=10, l=10, r=10), showlegend=True)
+                st.plotly_chart(fig_pie, use_container_width=True)
+                st.markdown('</div>', unsafe_allow_html=True)
+                
+            with c_p2:
+                st.markdown('<div class="saas-card">', unsafe_allow_html=True)
+                st.markdown('<div class="card-title">Mean Risk Index by Healthcare Facility</div>', unsafe_allow_html=True)
+                hosp_df = df.groupby('Hospital')['Risk Score'].mean().reset_index()
+                fig_bar = px.bar(
+                    hosp_df, x='Risk Score', y='Hospital', orientation='h',
+                    range_x=[0, 1],
+                    color='Risk Score',
+                    color_continuous_scale=['#16a34a', '#eab308', '#dc2626']
+                )
+                fig_bar.update_layout(margin=dict(t=10, b=10, l=10, r=10), coloraxis_showscale=False)
+                st.plotly_chart(fig_bar, use_container_width=True)
+                st.markdown('</div>', unsafe_allow_html=True)
+
+# --- APPLICATION ROUTING ---
 if 'role' not in st.session_state:
     st.session_state['role'] = None
 
 if st.session_state['role'] == 'User':
-    user_dashboard()
+    render_policyholder()
 elif st.session_state['role'] == 'Officer':
-    officer_dashboard()
+    render_officer()
 else:
-    login_page()
+    render_login()
