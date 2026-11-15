@@ -7,14 +7,14 @@ import os
 import mysql.connector
 import json
 from datetime import datetime
+import re
 
-# --- IMPORT YOUR AI MODULES ---
+# --- IMPORT AI MODULES ---
 from models.ocr import OCRProcessor
 from models.cnn_model import ForgeryDetectionModel
 from models.nlp_model import MedicalNLP
 from models.ml_model import FraudMLModel
 from models.multimodal import MultimodalFusion
-from models.xai import ExplainabilityModule
 
 from utils.preprocess import preprocess_for_ocr
 from utils.forensics import check_metadata, error_level_analysis
@@ -22,9 +22,7 @@ from utils.dedup import check_duplicate
 from utils.extract_fields import extract_key_fields
 from utils.combine_features import prepare_feature_vector
 from utils.validation_rules import check_benford_law
-# IMPORT THE NEW REPORT GENERATOR
 from utils.report_gen import generate_claim_report
-import re
 
 # --- CONFIGURATION ---
 app = FastAPI(title="Insurance Fraud Detection System")
@@ -57,14 +55,13 @@ def get_db_connection():
     return mysql.connector.connect(**DB_CONFIG)
 
 # --- LOAD AI MODELS ---
-print("⏳ Loading AI Models... (This may take a moment)")
+print("[INFO] Loading AI Models... (This may take a moment)")
 ocr_engine = OCRProcessor()
 cnn_engine = ForgeryDetectionModel()
 nlp_engine = MedicalNLP()
 ml_brain = FraudMLModel()
 fusion_engine = MultimodalFusion()
-xai_engine = ExplainabilityModule()
-print("✅ All AI Models Loaded & Ready!")
+print("[INFO] All AI Models Loaded & Ready!")
 
 # --- API ENDPOINTS ---
 
@@ -146,13 +143,6 @@ async def upload_claim(
         # Add Benford's Law risk factor if high
         if benford_score > 0.5:
             fusion_result['risk_factors'].append("Benford's Law Anomaly: Suspicious number distribution")
-            
-        # Add Layout Match risk factor if mismatch
-        if hospital_name:
-            from utils.layout_match import match_template
-            layout_result = match_template(file_path, hospital_name)
-            if layout_result.get('match_score', 1.0) < 0.4 and layout_result.get('status') == "Layout Mismatch":
-                fusion_result['risk_factors'].append(f"Layout Mismatch: Bill deviates from {hospital_name} template")
 
         final_score = (fusion_result['fraud_score'] * 0.6) + (ml_prob * 0.4)
         
@@ -163,13 +153,12 @@ async def upload_claim(
         risk_label = "High" if final_score > 0.7 else "Medium" if final_score > 0.3 else "Low"
 
         # F. Generate Explanation
-        xai_report = xai_engine.generate_explanation_report(
-            claim_id, 
-            {"fraud_score": final_score, "risk_factors": fusion_result['risk_factors']}
-        )
+        if final_score > 0.7:
+            explanation_text = f"CRITICAL ALERT: High probability of fraud ({final_score:.2f}). System detected {len(fusion_result['risk_factors'])} anomalies."
+        else:
+            explanation_text = "Document appears genuine. Minor anomalies found but within acceptable range."
 
-        # G. Generate PDF Report (NEW ADDITION)
-        # This calls the new utility script to create the PDF
+        # G. Generate PDF Report
         report_path = generate_claim_report({
             "claim_id": str(claim_id),
             "fraud_score": final_score,
@@ -201,7 +190,7 @@ async def upload_claim(
         ))
         
         sql_xai = "INSERT INTO claim_xai (claim_id, explanation_text) VALUES (%s, %s)"
-        cursor.execute(sql_xai, (claim_id, xai_report['human_readable_summary']))
+        cursor.execute(sql_xai, (claim_id, explanation_text))
         
         conn.commit()
         
@@ -226,8 +215,6 @@ def get_claims():
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     
-    # We join the tables directly instead of relying on the old View
-    # This ensures we get the latest data structure
     query = """
         SELECT 
             c.id AS claim_id, 
@@ -254,10 +241,8 @@ def get_claims():
     cursor.execute(query)
     claims = cursor.fetchall()
     
-    # Reformat flat DB rows into the Nested JSON the frontend expects
     formatted_claims = []
     for r in claims:
-        # Handle missing values if AI hasn't run perfectly
         f_score = r['fraud_score'] if r['fraud_score'] is not None else 0.0
         t_score = r['tamper_score'] if r['tamper_score'] is not None else 0.0
         hosp = r['hospital_name'] if r['hospital_name'] else "Unknown"

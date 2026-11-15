@@ -52,7 +52,6 @@ An intelligent multimodal AI system designed to detect fraudulent, tampered, or 
 │       ├── dedup.py             # Image hashing & deduplication
 │       ├── extract_fields.py    # Key entity parser
 │       ├── forensics.py         # ELA & metadata forensics
-│       ├── layout_match.py      # Template verification
 │       ├── preprocess.py        # Image pre-processing for OCR
 │       ├── report_gen.py        # Diagnostic PDF report generator
 │       └── validation_rules.py  # Benford's Law & rule validations
